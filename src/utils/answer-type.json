@@ -1,0 +1,82 @@
+[
+    {
+        "label": "Text",
+        "value": "text"
+    },
+    {
+        "label": "TextArea",
+        "value": "textarea"
+    },
+    {
+        "label": "Number",
+        "value": "number"
+    },
+    {
+        "label": "Phone",
+        "value": "phone"
+    },
+    {
+        "label": "Image",
+        "value": "image"
+    },
+    {
+        "label": "Video",
+        "value": "video"
+    },
+    {
+        "label": "Email",
+        "value": "email"
+    },
+    {
+        "label": "Radio",
+        "value": "radio"
+    },
+    {
+        "label": "Checkbox",
+        "value": "checkbox"
+    },
+    {
+        "label": "Select",
+        "value": "select"
+    },
+    {
+        "label": "Rating",
+        "value": "rating"
+    },
+    {
+        "label": "Date",
+        "value": "date"
+    },
+    {
+        "label": "Time",
+        "value": "time"
+    },
+    {
+        "label": "Date Time",
+        "value": "date_time"
+    },
+    {
+        "label": "Date Range",
+        "value": "date_range"
+    },
+    {
+        "label": "Year",
+        "value": "year"
+    },
+    {
+        "label": "Month",
+        "value": "month"
+    },
+    {
+        "label": "Coordinates",
+        "value": "coordinates"
+    },
+    {
+        "label": "Site Coordinates",
+        "value": "site_coordinates"
+    },
+    {
+        "label": "Site Address",
+        "value": "site_address"
+    }
+]

@@ -1,0 +1,224 @@
+<script>
+import Multiselect from "vue-multiselect";
+
+export default {
+    name: "ManageUser",
+    components: {
+        Multiselect,
+    },
+    props: {
+        currentUser: {
+            type: Object,
+            default: () => {},
+        },
+        users: {
+            type: Array,
+            default: () => [],
+        },
+        roles: {
+            type: Array,
+            default: () => [],
+        },
+        superCategories: {
+            type: Array,
+            default: () => [],
+        },
+        regions: {
+            type: Array,
+            default: () => [],
+        },
+        areas: {
+            type: Array,
+            default: () => [],
+        },
+        mode: {
+            type: String,
+            default: "add", // add , edit
+        },
+    },
+    data() {
+        return {
+            selectedUser: null,
+            selectedRole: null,
+            selectedRegion: [],
+            selectedSuperCategory: [],
+            selectedArea: [],
+            type: null,
+            roleTypes: [
+                { text: "IS Sourcing", value: "sourcing" },
+                { text: "IS Coorporate Sourcing", value: "coorporate_sourcing" },
+                { text: "IS Sourcing Head", value: "sourcing_head" },
+                { text: "IS MDM", value: "mdm" },
+            ],
+        };
+    },
+    methods: {
+        save() {
+            let areas = [],
+                regions = [],
+                superCategories = [];
+            const type = this.selectedRole.name === "sourcing" ? this.type : null;
+
+            if (type === "mdm") {
+                areas = [];
+                regions = [];
+                superCategories = null;
+            } else {
+                areas = this.selectedArea ? this.selectedArea.map(x => x) : [];
+                regions = this.selectedRegion ? this.selectedRegion.map(x => x) : [];
+                superCategories = this.selectedSuperCategory ? this.selectedSuperCategory.map(a => a.id) : null;
+            }
+
+            this.$emit("action", {
+                roleId: this.selectedRole.id,
+                userId: this.selectedUser.id,
+                sourcingType: type,
+                areas,
+                regions,
+                superCategories,
+            });
+        },
+        customLabel({ fullName, userName }) {
+            if (!fullName && !userName) {
+                return "Search User";
+            }
+            return `${userName} - ${fullName}`;
+        },
+    },
+    watch: {
+        currentUser(val) {
+            if (!val) return [];
+            if (this.mode == "add") {
+                this.type = null;
+                this.selectedSuperCategory = null;
+                this.selectedRegion = [];
+                this.selectedArea = [];
+                this.selectedRole = null;
+                this.selectedUser = null;
+            } else {
+                this.type = val.sourcingType;
+                if (val.UserSuperCategories && val.UserSuperCategories.length) {
+                    this.selectedSuperCategory = this.superCategories.filter(s =>
+                        val.UserSuperCategories.find(e => e.superCategoryId === s.id),
+                    );
+                } else {
+                    this.selectedSuperCategory = [];
+                }
+
+                if (val.UserRegions && val.UserRegions.length > 0) {
+                    this.selectedRegion = this.regions.filter(r => val.UserRegions.find(e => e.regionId === r.id));
+                } else {
+                    this.selectedRegion = [];
+                }
+
+                if (val.UserAreas && val.UserAreas.length) {
+                    this.selectedArea = this.areas.filter(
+                        r => val.UserAreas && val.UserAreas.find(e => e.areaId === r.id),
+                    );
+                } else {
+                    this.selectedArea = [];
+                }
+                this.selectedRole = val.role;
+                this.selectedUser = val;
+            }
+        },
+    },
+    computed: {
+        filteredAreas() {
+            if (!this.selectedRegion || !this.selectedRegion.length) return this.areas;
+
+            const regionIds = this.selectedRegion.map(r => r.id);
+
+            return this.areas.filter(s => regionIds.includes(s.regionId));
+        },
+        isSourcing() {
+            return this.selectedRole && this.selectedRole.name == "sourcing";
+        },
+    },
+};
+</script>
+
+<template lang="pug">
+div.user-mana-ge
+    form.row(@submit.prevent="save()")
+        .col-sm-12
+            .title-style-1.text-barbique.custom-arrow-add-AV {{mode | humanize}} User
+            //- hr
+        .sweet-modal-max-height
+            .container-fluid
+                .row
+                    .col-sm-12.mb-2
+                        form-field(
+                            v-model="selectedUser"
+                            attribute="User",
+                            input-type="search-select",
+                            :items="users",
+                            label="userName",
+                            trackBy='id',
+                            :required="true",
+                            openDirection="bottom",
+                            placeholder="Search User",
+                            :custom-label="customLabel",
+                            :disabled="mode === 'edit'"
+                        )
+                    .col-sm-12
+                        form-field(
+                            v-model="selectedRole",
+                            attribute="Role",
+                            input-type="select",
+                            :items='roles',
+                            label='name',
+                            openDirection="bottom",
+                            :required="true",
+                            trackBy='id',
+                            placeholder="Select Role",
+                        )
+                    .col-sm-12
+                        form-field(
+                            v-if="isSourcing"
+                            v-model="type",
+                            input-type="radio-group",
+                            attribute="Select Type",
+                            :items="roleTypes",
+                        )
+                    .col-sm-12
+                        form-field(
+                            v-if="isSourcing && type ==='sourcing' || type ==='coorporate_sourcing' || type ==='sourcing_head'"
+                            v-model="selectedSuperCategory",
+                            inputType="search-multiple-select",
+                            label="name",
+                            attribute="Super Category",
+                            trackBy="id",
+                            :items="superCategories",
+                            placeholder="Select Super Category",
+                        )
+                    .col-sm-12
+                        form-field(
+                            v-if="type !== 'mdm'  || !isSourcing",
+                            v-model="selectedRegion",
+                            attribute="Region",
+                            input-type="search-multiple-select",
+                            :items='regions',
+                            label='name',
+                            trackBy='id',
+                            placeholder="Search Region",
+                            openDirection="top",
+                        )
+                    //.col-sm-12
+                        form-field(
+                            v-if="type !== 'mdm'  ||  !isSourcing",
+                            v-model="selectedArea",
+                            attribute="Area",
+                            input-type="search-multiple-select",
+                            :items="filteredAreas",
+                            label='name',
+                            trackBy='id',
+                            placeholder="Search Area"
+                        )
+        .col-sm-12.mt-1
+            .text-right
+                button.btn.btn-primary.bbq-btn-primary(:disabled="!selectedRole || !selectedUser") {{ mode === 'edit'? 'update' : 'add' | humanize}}
+</template>
+
+<style lang="scss">
+</style>

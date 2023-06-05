@@ -1,0 +1,914 @@
+<script>
+import { mapGetters } from "vuex";
+const { uniq, cloneDeep } = require("lodash");
+
+import DLayout from "@layouts/default-layout";
+import SelectCategorySection from "./subpages/select-category-section";
+import CompanyDetailSection from "./subpages/company-detail-section";
+import SupplyLocationSection from "./subpages/supply-location-section";
+import LocationDetailSection from "./subpages/location-detail-section";
+import VendorDetailSection from "./subpages/vendor-detail-section";
+import VendorTypeTermSection from "./subpages/vendor-type-term-section";
+import VendorCategoryApprovalSection from "./subpages/vendor-category-approval-section";
+import SubmitDetail from "./subpages/submit-detail";
+import AssignToOther from "./components/assign-to-other";
+import ChangePassword from "@views/vendor-management/vendor-profile/components/change-password";
+
+export default {
+    name: "VendorProfile",
+    components: {
+        DLayout,
+        SelectCategorySection,
+        SupplyLocationSection,
+        CompanyDetailSection,
+        LocationDetailSection,
+        VendorDetailSection,
+        VendorTypeTermSection,
+        VendorCategoryApprovalSection,
+        SubmitDetail,
+        AssignToOther,
+        ChangePassword,
+    },
+    data() {
+        const tabList = [
+            {
+                title: "Company Detail",
+                component: "company-detail-section",
+            },
+            {
+                title: "Select Category",
+                component: "select-category-section",
+            },
+            {
+                title: "Vendor Type",
+                component: "vendor-type-term-section",
+            },
+            {
+                title: "Supply Location",
+                component: "supply-location-section",
+            },
+            {
+                title: "Location & Bank",
+                component: "location-detail-section",
+            },
+            {
+                title: "Vendor Detail",
+                component: "vendor-detail-section",
+            },
+            {
+                title: "Approval Status",
+                component: "vendor-category-approval-section",
+            },
+        ];
+        return {
+            tabList,
+            selected: false,
+            mstSuperCategories: [],
+            mstStructures: [],
+            mstPaymentTerms: [],
+            mstVendorPostingGroups: [],
+            mstCities: [],
+            mstStates: [],
+            mstProductGroups: [],
+            mstArea: [],
+            mstVendorTypes: [],
+            applicationStatus: null,
+            vendor: {
+                superCategories: [],
+                companyName: null,
+                applicationMethod: "manual",
+                structureId: null,
+                paymentTermId: null,
+                vendorPostingGroupId: null,
+                vatBusPostingGroup: "vat",
+                generalBusPostingGroup: "main_store",
+                productGroupId: null,
+                isMSME: false,
+                MSMECertificate: {},
+                cashLimit: null,
+                status: "draft",
+                vendorTypeId: null,
+            },
+            vendorLocations: [],
+            vendorSuperCategories: [],
+            vendorApprovalRequests: [],
+            vendorData: {
+                vendorSuperCategories: [],
+                vendorAreas: [],
+            },
+            currentView: tabList[0].component,
+            loggedInUser: this.$store.getters["account/getUser"],
+            vendorId: this.$router.currentRoute.params.id,
+            assignee: [],
+            isFetching: true,
+            edit: false,
+        };
+    },
+    async created() {
+        this.$Progress.start();
+        await Promise.all([this.getMasterData(), this.getVendorData()]);
+        this.$Progress.finish();
+    },
+    mounted() {
+        this.changePasswordModle();
+    },
+    methods: {
+        editProfile() {
+            this.edit = !this.edit;
+        },
+        changePasswordModle() {
+            if (localStorage.getItem("first-time-login")) this.$refs.document_requirement.open();
+        },
+        closeDocumentModal() {
+            localStorage.removeItem("first-time-login");
+            this.$refs.document_requirement.close();
+        },
+        async getMasterData() {
+            [
+                this.mstSuperCategories,
+                this.mstStructures,
+                this.mstPaymentTerms,
+                this.mstCities,
+                this.mstStates,
+                this.mstVendorPostingGroups,
+                this.mstProductGroups,
+                this.mstVendorTypes,
+            ] = await Promise.all([
+                this.$http.get("mst-super-category", {
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+                this.$http.get("mst-structure", {
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+                this.$http.get("mst-payment-term", {
+                    // where:{
+                    //     isActive : true,
+                    // },
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+                this.$http.get("mst-city", {
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+                this.$http.get("mst-state", {
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+                this.$http.get("mst-vendor-posting-group", {
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+                this.$http.get("mst-product-group", {
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+                this.$http.get("mst-vendor-type", {
+                    where: {
+                        isDeleted: false,
+                    },
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                }),
+            ]);
+        },
+        async getVendorData() {
+            const query = {
+                include: [
+                    {
+                        model: "User",
+                        attributes: ["id", "fullName", "phone", "email"],
+                        include: [
+                            {
+                                model: "UserArea",
+                                attributes: {
+                                    exclude: ["created_at", "updated_at", "userId"],
+                                },
+                            },
+                            {
+                                model: "UserSuperCategory",
+                                attributes: {
+                                    exclude: ["created_at", "updated_at", "userId"],
+                                },
+                                include: [
+                                    {
+                                        model: "MstSuperCategory",
+                                    },
+                                ],
+                            },
+                            {
+                                model: "UserRegion",
+                                attributes: ["id", "regionId", "userId"],
+                            },
+                        ],
+                    },
+                    {
+                        model: "MstStructure",
+                    },
+                ],
+            };
+
+            if (!this.$lodash.isEmpty(this.$router.currentRoute.params)) {
+                const { id } = this.$router.currentRoute.params;
+
+                this.vendorId = id;
+
+                query.where = {
+                    id,
+                };
+            } else {
+                const { id } = this.$store.getters["account/getVendor"];
+
+                this.vendorId = id;
+
+                query.where = {
+                    id,
+                };
+            }
+
+            let result = [];
+
+            [result, this.vendorApprovalRequests, this.vendorLocations, this.mstArea] = await Promise.all([
+                this.$http.get("vendor", query),
+                this.$http.get("vendor-approval-request", {
+                    where: {
+                        vendorId: this.vendorId,
+                    },
+                    include: [
+                        {
+                            model: "MstSuperCategory",
+                        },
+                        {
+                            model: "User",
+                            as: "VendorApprovalAssignedTo",
+                            attributes: ["id", "fullName", "sourcingType"],
+                            include: [
+                                {
+                                    model: "Role",
+                                },
+                            ],
+                        },
+                        {
+                            model: "User",
+                            as: "VendorApprovalAssignedBy",
+                            attributes: ["id", "fullName", "sourcingType"],
+                            include: [
+                                {
+                                    model: "Role",
+                                },
+                            ],
+                        },
+                    ],
+                }),
+                this.$http.get("vendor-location", {
+                    where: {
+                        vendorId: this.vendorId,
+                        isDeleted: false,
+                    },
+                    attributes: {
+                        exclude: ["created_at", "updated_at"],
+                    },
+                    required: true,
+                    include: [
+                        {
+                            model: "VendorBankDetail",
+                            attributes: {
+                                exclude: ["created_at", "updated_at"],
+                            },
+                        },
+                        {
+                            model: "VendorDocument",
+                            attributes: {
+                                exclude: ["created_at", "updated_at"],
+                            },
+                            where: {
+                                isDeleted: false,
+                            },
+                            required: false,
+                        },
+                        {
+                            model: "MstState",
+                        },
+                    ],
+                }),
+                this.$http.get("mst-area", {
+                    attributes: ["id", "name", "regionId"],
+                    include: [
+                        {
+                            model: "MstCity",
+                            attributes: ["name"],
+                        },
+                        {
+                            model: "MstState",
+                            attributes: ["name", "code"],
+                        },
+                    ],
+                }),
+            ]);
+
+            this.vendor = this.$lodash.first(result);
+
+            for (let i = 0; i < this.vendorLocations.length; i++) {
+                this.vendorLocations[i].taxLiable = this.vendorLocations[i].taxLiable.toString();
+            }
+
+            if (this.vendor) {
+                this.vendor.VendorApprovalRequests = this.vendorApprovalRequests;
+                this.vendor.VendorLocations = this.vendorLocations;
+                this.vendorData.vendorSuperCategories =
+                    this.vendor.User.UserSuperCategories.map(s => s.superCategoryId) || [];
+                const areaIds = this.vendor.User.UserAreas.map(s => s.areaId);
+                this.vendorData.vendorAreas = this.mstArea.filter(a => areaIds.includes(a.id));
+            }
+
+            if (!this.isVendor) this.getAssignee();
+
+            this.isFetching = false;
+        },
+        async updatePassword(data) {
+            if (data.newPassword == data.confirmPassword) {
+                try {
+                    await this.$http.patch("user/change-password", data);
+
+                    await this.$http.updateById("user", this.loggedInUser.id, {
+                        tempPassword: null,
+                    });
+
+                    this.$utility.showSucessMessage("Password successfully changed");
+
+                    this.$store.dispatch("account/update", { tempPassword: null });
+                    this.$refs.changePassword.close();
+                    this.$refs.document_requirement.open();
+                } catch (err) {
+                    this.$utility.showErrorMessage(err.message);
+                }
+            } else {
+                this.$utility.showErrorMessage("Password does not match");
+            }
+        },
+        async updateStatus({ status, comment }) {
+            try {
+                this.$Progress.start();
+
+                let vendorStatus = status == "approved" ? "approved_by_mdm" : "rejected_by_mdm";
+
+                await this.$http.updateById("vendor", this.vendor.id, this.vendor);
+
+                await this.$http.updateById("vendor", this.vendor.id, { status: vendorStatus });
+
+                this.vendor.status = vendorStatus;
+
+                let approvalRequest = null;
+
+                if (this.loggedInUser.role === "sourcing") {
+                    approvalRequest = this.vendorApprovalRequests.find(
+                        u => u.status === "pending" && u.assignedToId == this.loggedInUser.id,
+                    );
+                    if (approvalRequest) {
+                        approvalRequest.status = status;
+                        await this.$http.updateById("vendor-approval-request", approvalRequest.id, {
+                            status,
+                            comment,
+                            reviewedDate: Date.now(),
+                        });
+                    }
+                }
+                this.$utility.showSucessMessage("Status successfully updated");
+
+                this.statusNotificationToVendor([approvalRequest], comment);
+
+                this.statusNotificationToTeam([approvalRequest], comment);
+
+                this.$Progress.finish();
+
+                this.$utility.goToPage("vendor.list");
+            } catch (err) {
+                this.$Progress.finish();
+                this.$utility.showErrorMessage(err.message);
+            }
+        },
+        async createOrUpdate(type = "save") {
+            try {
+                this.$Progress.start();
+                await this.$http.updateById("vendor", this.vendor.id, this.vendor);
+
+                await Promise.all([
+                    this.saveLocationAndBankDetail(type),
+                    this.saveVendorSuperCategories(),
+                    this.saveVendorAreas(),
+                ]);
+
+                if (type === "submit") {
+                    const vendorCopy = cloneDeep(this.vendor);
+                    await this.$http.updateById(
+                        "vendor",
+                        vendorCopy.id,
+                        Object.assign(vendorCopy, { status: "pending" }),
+                    );
+                }
+
+                this.$utility.showSucessMessage("Profile successfully updated");
+
+                this.$utility.goToPage("vendor.contract");
+                this.$Progress.finish();
+            } catch (err) {
+                this.$utility.showErrorMessage(err.message);
+            }
+        },
+        async saveVendorSuperCategories() {
+            const items = this.vendorData.vendorSuperCategories.map(s => ({
+                userId: this.vendor.userId,
+                superCategoryId: s,
+            }));
+
+            if (this.vendor.User.UserSuperCategories && this.vendor.User.UserSuperCategories.length) {
+                await this.$http.bulkDelete("user-super-category", this.vendor.User.UserSuperCategories);
+            }
+
+            if (items && items.length) {
+                await this.$http.bulkCreateWithoutHook("user-super-category", items);
+            }
+        },
+        async saveVendorAreas() {
+            if (this.vendorData && this.vendorData.vendorAreas && this.vendorData.vendorAreas.length) {
+                const checkAllLocation = this.vendorData.vendorAreas.map(a => a.name);
+                if (checkAllLocation.includes("All")) this.vendorData.vendorAreas.shift();
+
+                const items = this.vendorData.vendorAreas
+                    .filter(a => a.id)
+                    .map(s => ({
+                        userId: this.vendor.userId,
+                        areaId: s.id,
+                    }));
+
+                let regionIds = this.vendorData.vendorAreas.map(a => a.regionId);
+
+                regionIds = uniq(regionIds);
+
+                const regions = regionIds.map(r => ({
+                    userId: this.vendor.userId,
+                    regionId: r,
+                }));
+
+                if (this.vendor.User.UserAreas && this.vendor.User.UserAreas.length) {
+                    await this.$http.bulkDelete("user-area", this.vendor.User.UserAreas);
+                    await this.$http.bulkDelete("user-region", this.vendor.User.UserRegion);
+                }
+
+                if (items && items.length) {
+                    await this.$http.bulkCreateWithoutHook("user-area", items);
+                    await this.$http.bulkCreateWithoutHook("user-region", regions);
+                }
+            }
+        },
+        async saveLocationAndBankDetail(type = "save") {
+            if (this.vendorLocations && !this.vendorLocations.length) return;
+
+            for (let location of this.vendorLocations) {
+                location = {
+                    ...{
+                        vendorId: this.vendor.id,
+                    },
+                    ...location,
+                    ...{
+                        stateId: location.stateId || null,
+                    },
+                };
+
+                const newLoc = await this.$http.updateOrCreate("vendor-location", location);
+
+                if (location.VendorDocuments && location.VendorDocuments.length) {
+                    const documents = location.VendorDocuments.map(d => ({
+                        vendorLocationId: newLoc.id,
+                        ...d,
+                    }));
+
+                    const oldDocuments = this.vendorLocations.map(a => a.VendorDocuments);
+
+                    await this.$http.bulkDelete("vendor-document", oldDocuments);
+                    await this.$http.bulkUpdateOrCreate("vendor-document", documents);
+                }
+
+                if (location.VendorBankDetails && location.VendorBankDetails.length) {
+                    await this.saveBankDetail(location.VendorBankDetails, newLoc.id, type);
+                }
+            }
+        },
+        async saveBankDetail(VendorBankDetails, locationId, type) {
+            let banks = VendorBankDetails.map(b => ({
+                vendorLocationId: locationId,
+                ...b,
+            }));
+
+            if (type === "submit") {
+                banks = banks.map(b => ({
+                    ...b,
+                    isAccountConfirmed: true,
+                }));
+            }
+
+            for (const vendorBank of banks) {
+                const newBank = await this.$http.updateOrCreate("vendor-bank-detail", vendorBank);
+
+                if (vendorBank.VendorDocuments && vendorBank.VendorDocuments) {
+                    const documents = vendorBank.VendorDocuments.map(d => ({
+                        vendorBankDetailId: newBank.id,
+                        ...d,
+                    }));
+                    await this.$http.bulkUpdateOrCreate("vendor-document", documents);
+                }
+            }
+        },
+        showTab(tab) {
+            if (["vendor-category-approval-section"].includes(tab) && this.isVendor && this.vendor.status === "draft") {
+                return false;
+            }
+            // if (["vendor-type-term-section"].includes(tab) && this.isVendor) {
+            //     return false;
+            // }
+            if (["vendor-detail-section"].includes(tab)) {
+                if (this.isSuperAdmin || this.isMDM) return true;
+                else return false;
+            }
+            return true;
+        },
+        async assignToOther({ assigneeUser }) {
+            const vendorApprovalIds = this.vendorApprovalRequests
+                .filter(v => v.status === "pending" && v.assignedToId === this.loggedInUser.id)
+                .map(v => v.id);
+
+            await this.$http.update(
+                "vendor-approval-request",
+                {
+                    where: {
+                        id: {
+                            $in: vendorApprovalIds,
+                        },
+                    },
+                },
+                {
+                    assignedToId: assigneeUser.id,
+                    assignedById: this.loggedInUser.id,
+                },
+            );
+
+            this.$utility.showSucessMessage("successfully assigned!");
+
+            this.$refs.view_assignee.close();
+
+            this.$utility.goToPage("vendor.list");
+        },
+        async getAssignee() {
+            const assignedUserIds = this.vendorApprovalRequests
+                .filter(v => v.status === "pending" && v.assignedToId)
+                .map(v => v.assignedToId);
+            const areaIds = this.vendor && this.vendor.User ? this.vendor.User.UserAreas.map(s => s.areaId) : [];
+            const regionIds = this.mstArea.filter(a => areaIds.includes(a.id)).map(a => a.regionId);
+            const superCategoryIds = this.vendorData ? this.vendorData.vendorSuperCategories : [];
+
+            const query = {
+                where: {
+                    sourcingType: {
+                        $in: ["sourcing", "coorporate_sourcing"],
+                    },
+                    id: {
+                        $notIn: assignedUserIds,
+                    },
+                },
+                attributes: ["id", "fullName", "userName", "employeeCode", "sourcingType"],
+                include: [
+                    {
+                        model: "UserRegion",
+                        where: {
+                            regionId: {
+                                $in: this.$lodash.uniq(regionIds),
+                            },
+                        },
+                        attributes: ["id"],
+                    },
+                    {
+                        model: "UserSuperCategory",
+                        where: {
+                            superCategoryId: {
+                                $in: this.$lodash.uniq(superCategoryIds),
+                            },
+                        },
+                        attributes: ["id"],
+                    },
+                ],
+            };
+
+            this.assignee = await this.$http.get("user", query);
+        },
+        async approveRequests({ items, comment }) {
+            const approvalRequests = items.map(i => {
+                i.comment = comment;
+                i.reviewedDate = Date.now();
+                return i;
+            });
+
+            
+            await this.$http.bulkUpdateOrCreate("vendor-approval-request", approvalRequests);
+            
+
+            const isApproved = items.find(a => a.status === "approved");
+
+            if (this.isSourcingHead && isApproved) {                
+                await this.$http.updateById("vendor", this.vendor.id, {
+                    status: "approved_by_sourcing_head",                    
+                });
+            } else if (this.isSourcingHead) {
+                await this.$http.updateById("vendor", this.vendor.id, {
+                    status: "rejected_by_sourcing_head",
+                });
+            } else if (isApproved) {
+                await this.$http.updateById("vendor", this.vendor.id, {
+                    status: "approved_by_sourcing",
+                    paymentTermId: this.vendor.paymentTermId, // payment term
+                    vendorTypeId: this.vendor.vendorTypeId, // payment term
+                });
+            } else {
+                await this.$http.updateById("vendor", this.vendor.id, {
+                    status: "rejected_by_sourcing",
+                    paymentTermId: this.vendor.paymentTermId, // payment term
+                    vendorTypeId: this.vendor.vendorTypeId, // payment term
+                });
+            }
+
+            this.statusNotificationToVendor(items, comment);
+
+            this.statusNotificationToTeam(items, comment);
+
+            this.$utility.showSucessMessage("Successfully reviewed!");
+
+            this.$utility.goToPage("vendor.list");
+        },
+        async statusNotificationToVendor(requests, comment) {
+            let message = "Your category approval status ";
+
+            for (const instance of requests) {
+                const cat = instance.MstSuperCategory ? instance.MstSuperCategory.name : null;
+
+                if (cat) message += `${cat}: ${instance.status}, `;
+                else message += `MDM: ${instance.status} `;
+            }
+
+            message += ` comment - ${comment}`;
+
+            const notification = {
+                title: "Vendor Profile status",
+                type: "vendor_approval_request_status",
+                payload: requests,
+                userId: this.vendor.userId,
+                message,
+            };
+            await this.$http.rawPost("notification", notification);
+        },
+        async findCoSourcing(message, payload, title) {
+            const userSuperCategoriesId = this.loggedInUser.UserSuperCategories.map(a => a.superCategoryId);
+
+            const coSourcingUsers = await this.$http.get("user", {
+                where: {
+                    sourcingType: "coorporate_sourcing",
+                },
+                attributes: ["id"],
+                include: [
+                    {
+                        model: "Role",
+                        where: {
+                            name: "sourcing",
+                        },
+                        attributes: ["name"],
+                    },
+                    {
+                        model: "UserSuperCategory",
+                        where: {
+                            superCategoryId: {
+                                $in: userSuperCategoriesId,
+                            },
+                        },
+                        attributes: ["superCategoryId"],
+                    },
+                ],
+            });
+
+            if (coSourcingUsers && coSourcingUsers.length) {
+                const userIds = coSourcingUsers.map(a => a.id);
+
+                for (const userId of userIds) {
+                    this.$http
+                        .rawPost("notification", {
+                            userId,
+                            payload,
+                            title,
+                            type: "vendor_approval_request_status",
+                            message,
+                        })
+                        .then(f => f);
+                }
+            }
+        },
+        async statusNotificationToTeam(requests, comment) {
+            let message = `Vendor (${this.vendor.companyName}) category approval status `;
+            // Partner account {#var#} category approval status NonFood: {#var#} by {#var#} comment - {#var#}{#var#} - Team Barbeque Nation
+            for (const instance of requests) {
+                const cat = instance.MstSuperCategory ? instance.MstSuperCategory.name : null;
+                if (cat) message += `${cat}: ${instance.status}, `;
+                else message += `MDM: ${instance.status} `;
+            }
+            message += ` by ${this.loggedInUser.fullName} comment - ${comment} `;
+            message += `- Team Barbeque Nation`;
+            const isApproved = requests.find(a => a.status === "approved");
+            let title = isApproved
+                ? `Vendor Category Approved - ${this.vendor.companyName}`
+                : `Vendor Category Rejected - ${this.vendor.companyName}`;
+            const vendorApprovalRequests = this.$lodash.uniqBy(this.vendor.VendorApprovalRequests, "assignedToId");
+            for (const approval of vendorApprovalRequests) {
+                const notification = {
+                    title,
+                    type: "vendor_approval_request_status",
+                    payload: requests,
+                    userId: approval.assignedToId,
+                    message,
+                };
+                this.$http.rawPost("notification", notification).then(f => f);
+            }
+            if (this.isRegionalSourcing || this.isMDM) this.findCoSourcing(message, requests, title).then(f => f);
+        },
+        setCurrentTab(value) {
+            this.currentView = value;
+        },
+    },
+    computed: {
+        ...mapGetters("account", ["isSuperAdmin", "isVendor", "isSourcingHead", "isMDM", "isSourcingRole", "isRegionalSourcing"]),
+        currentProp() {
+            switch (this.currentView) {
+                case "select-category-section":
+                    return {
+                        vendor: this.vendor,
+                        vendorData: this.vendorData,
+                        categories: this.mstSuperCategories,
+                        mstVendorTypes: this.mstVendorTypes,
+                        mode: this.mode,
+                        isFetching: this.isFetching,
+                    };
+                case "company-detail-section":
+                    return {
+                        vendor: this.vendor,
+                        mode: this.mode,
+                    };
+                case "supply-location-section":
+                    return {
+                        vendorData: this.vendorData,
+                        areas: this.mstArea,
+                        mode: this.mode,
+                    };
+                case "location-detail-section":
+                    return {
+                        vendor: this.vendor,
+                        locations: this.vendorLocations,
+                        mstStates: this.mstStates,
+                        mode: this.mode,
+                        loggedInUser: this.loggedInUser,
+                    };
+                case "vendor-type-term-section":
+                    return {
+                        vendor: this.vendor,
+                        mstVendorTypes: this.mstVendorTypes,
+                        mstPaymentTerms: this.mstPaymentTerms,
+                        vendorData: this.vendorData,
+                        categories: this.mstSuperCategories,
+                        mode: this.vendorTypeTermMode,
+                    };
+                case "vendor-detail-section":
+                    return {
+                        vendor: this.vendor,
+                        mstStructures: this.mstStructures,
+                        mstPaymentTerms: this.mstPaymentTerms,
+                        mstVendorPostingGroups: this.mstVendorPostingGroups,
+                        mstProductGroups: this.mstProductGroups,
+                        mode: (this.isMDM && this.vendor.status === "approved_by_sourcing_head") || (this.isSourcingHead && this.vendor.status === "approved_by_sourcing") ? "add" : "readOnly",
+                    };
+                case "vendor-category-approval-section":
+                    return {
+                        items: this.vendorApprovalRequests,
+                    };
+                default:
+                    return {};
+            }
+        },
+        mode() {
+            if (this.edit) return "add";
+            if (this.isInternalVendor && this.isSourcingRole) return "add";
+            if (this.vendor && ["draft"].includes(this.vendor.status) && this.isVendor) return "add";
+            return "readOnly";
+        },
+        region() {
+            return this.mstRegion.map(c => ({ name: c.name, value: c.id }));
+        },
+        isEditable() {
+            if (this.isInternalVendor) return true;
+            if ((this.isMDM && this.vendor.status != "approved_by_mdm") || (this.isSourcingHead && this.vendor.status != "approved_by_sourcing_head")) {
+                const isApproved = this.vendorApprovalRequests.find(u => u.status === "approved");
+                return isApproved;
+            }
+            return false;
+        },
+        isInternalVendor() {
+            return this.vendor && this.vendor.type === "internal" && this.vendor.status === "draft";
+        },
+        showWaitingMsg() {
+            return ["approved_by_mdm", "rejected_by_mdm", "rejected_by_sourcing", "rejected_by_sourcing_head"].includes(this.vendor.status);
+        },
+        vendorTypeTermMode() {
+            // if (this.mode === "add") {
+            if (this.isVendor && ["draft", "approved_by_mdm", "approved_by_sourcing_head"].includes(this.vendor.status)) {
+                return "add";
+            } else if (this.isSourcingRole && this.vendor.status === "pending") {
+                return "add";
+            }
+            // }
+            return "readOnly";
+        },
+    },
+};
+</script>
+
+<template lang="pug">
+d-layout
+    template(slot="body")
+        .que-category-border.bg-white.custom-shadow
+            .container.vendor-mgmt
+                .row
+                    .col-sm-12
+                        b-tabs(tabs)
+                            b-tab(
+                                v-for="tab in tabList",
+                                v-if="showTab(tab.component)",
+                                :key="tab.component",
+                                :title="tab.title",
+                                :active="currentView == tab.component",
+                                @click="currentView = tab.component"
+                            )
+                                component.text-barbique(v-bind="currentProp", :is="currentView")
+                    .col-sm-12
+                        submit-detail(
+                            v-if="!isFetching",
+                            :vendor="vendor",
+                            :vendorLocations="vendorLocations",
+                            :vendorData="vendorData",
+                            :vendorStatus="vendor.status",
+                            :approvalRequests="vendorApprovalRequests",
+                            :mstStates="mstStates",
+                            :mstSuperCategories="mstSuperCategories",
+                            :currentTab="currentView",
+                            @editProfile="editProfile",
+                            @action="createOrUpdate",
+                            @updateStatus="updateStatus",
+                            @openAssignUserModal="$refs.view_assignee.open()",
+                            @approveRequests="approveRequests",
+                            @setCurrentTab="setCurrentTab"
+                        )
+        sweet-modal.assign-to-other(ref="view_assignee", width="30%", overlay-theme="dark") 
+            assign-to-other(@assignToOther="assignToOther", :assignee="assignee")
+        sweet-modal.document-note(ref="document_requirement", width="25%", overlay-theme="dark")
+            .row
+                .col-sm-12.pt-3.pb-2.popup-bg-documents.text-center
+                    img.notes-img.pb-2(src="@assets/images/list.png")
+                    .title-style-1.text-barbique Keep these documents ready
+                .col-sm-12.popup-documents.pt-2.pb-2
+                    ul
+                        li.list-group-item.list-group-item-action PAN Certificate
+                        li.list-group-item.list-group-item-action GST Certificate
+                        li.list-group-item.list-group-item-action Cancelled Cheque
+                        li.list-group-item.list-group-item-action TAN Certificate
+                        li.list-group-item.list-group-item-action MSME Certificate
+                .col-sm-12.text-center.mt-2
+                    .btn.btn-primary.btn-sm.bbq-btn-primary.center.cursor-pointer(@click="closeDocumentModal()") Got it
+        sweet-modal(
+            ref="changePassword",
+            width="50%",
+            overlay-theme="dark",
+            :blocking="true",
+            :hide-close-button="true"
+        )
+            change-password(@updatePassword="updatePassword")
+</template>
+
+<style lang="scss">
+.approval_vendor_status {
+    position: absolute;
+    top: -20px;
+    left: 20px;
+}
+</style>

@@ -1,0 +1,93 @@
+{
+    "name": "bbq-bd-admin",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "vue-cli-service serve --mode development --open",
+        "serve": "vue-cli-service serve",
+        "build": "vue-cli-service build --mode production",
+        "staging": "vue-cli-service build --mode staging",
+        "lint": "vue-cli-service lint"
+    },
+    "dependencies": {
+        "@mdi/font": "^7.2.96",
+        "@syncfusion/ej2-vue-grids": "^18.4.43",
+        "apexcharts": "^3.15.5",
+        "axios": "^0.18.0",
+        "bootstrap": "^4.3.1",
+        "bootstrap-vue": "^2.0.0-rc.19",
+        "core-js": "^2.6.5",
+        "element-ui": "^2.8.0",
+        "font-awesome": "^4.7.0",
+        "globalthis": "^1.0.3",
+        "lodash": "^4.17.11",
+        "material-design-icons-iconfont": "^6.7.0",
+        "numeral": "^2.0.6",
+        "printd": "^1.4.0",
+        "raven-js": "^3.27.2",
+        "sweet-modal-vue": "^2.0.0",
+        "underscore.string": "^3.3.5",
+        "vee-validate": "^2.2.3",
+        "vue": "^2.6.12",
+        "vue-apexcharts": "^1.5.2",
+        "vue-cli-plugin-pug": "^1.0.7",
+        "vue-element-excel": "^1.1.0",
+        "vue-excel-export": "^0.1.3",
+        "vue-html-to-paper": "^1.1.0",
+        "vue-json-csv": "^1.2.9",
+        "vue-moment": "^4.0.0",
+        "vue-multiselect": "^2.1.6",
+        "vue-perfect-scrollbar": "^0.1.0",
+        "vue-progressbar": "^0.7.5",
+        "vue-router": "^3.0.6",
+        "vue-scrollto": "^2.15.0",
+        "vue-video-player": "^5.0.2",
+        "vue2-editor": "^2.9.1",
+        "vue2-filters": "^0.6.0",
+        "vuedraggable": "^2.20.0",
+        "vuetify": "^1.5.12",
+        "vuex": "^3.1.0",
+        "vuex-router-sync": "^5.0.0"
+    },
+    "devDependencies": {
+        "@vue/cli-plugin-babel": "^3.6.0",
+        "@vue/cli-plugin-eslint": "^3.6.0",
+        "@vue/cli-service": "^3.6.0",
+        "@vue/compiler-sfc": "^3.3.4",
+        "babel-eslint": "^10.0.1",
+        "eslint": "^5.16.0",
+        "eslint-plugin-vue": "^5.0.0",
+        "sass": "^1.62.1",
+        "sass-loader": "^7.1.0",
+        "stylus": "^0.54.5",
+        "stylus-loader": "^3.0.1",
+        "vue-cli-plugin-vuetify": "^0.5.0",
+        "vue-template-compiler": "^2.6.10",
+        "vue2-slideout-panel": "^2.13.0",
+        "vuetify-loader": "^1.0.5"
+    },
+    "eslintConfig": {
+        "root": true,
+        "env": {
+            "node": true
+        },
+        "extends": [
+            "plugin:vue/essential",
+            "eslint:recommended"
+        ],
+        "rules": {},
+        "parserOptions": {
+            "parser": "babel-eslint"
+        }
+    },
+    "postcss": {
+        "plugins": {
+            "autoprefixer": {}
+        }
+    },
+    "browserslist": [
+        "> 1%",
+        "last 2 versions",
+        "not ie <= 8"
+    ]
+}

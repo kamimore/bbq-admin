@@ -1,0 +1,80 @@
+{
+        "title": "Contract Management",
+        "icon": "el-icon-s-cooperation",
+        "showTo": "isSuperAdmin",
+        "childRoute": ["contract.create", "template.create", "contract.history"],
+        "submenus": [
+            {
+                "title": "New / Renew Contract",
+                "route": "contract.create",
+                "showTo": ""
+            },
+            {
+                "title": "Manage Template Category",
+                "route": "template.category",
+                "disabled": false,
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Manage Template",
+                "route": "template.create",
+                "disabled": false,
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Contract History",
+                "route": "contract.history",
+                "showTo": "isSuperAdmin"
+            }
+        ]
+    },
+    
+            // Recurring contract
+        v-data-table(
+            v-else
+            :headers="headers", 
+            :search="search", 
+            :items="contract.contractItems", 
+            :rows-per-page-items="[1000]",
+            item-key="id",
+        )
+            template(v-slot:items='{ item, index }')
+                td.text-center {{ item.MstItem ? item.MstItem.code : '-' }}
+                td.text-center
+                    form-field-input(
+                        v-model="item.MstItem",
+                        attribute="Item",
+                        :openDirection="index  > 2 ? 'top' : 'bottom'",
+                        input-type="search-select",
+                        :items="filteredItems",
+                        label='name',
+                        trackBy='id',
+                        :required="true",
+                        placeholder="Search Item",
+                        @change="itemSelected(index, $event)"
+                    )
+                //- td.text-center  {{item.currentPrice || '-'}} / Unit
+                td.text-center 
+                    form-field-input(
+                        v-model="item.MstItem",
+                        attribute="Unit",
+                        input-type="select",
+                        :items="unitOptions",
+                        :openDirection="index  > 2 ? 'top' : 'bottom'",
+                        label="unit"
+                        trackBy="id",
+                        :required="true",
+                        placeholder="Search Unit",
+                        :disabled="!item.MstItem",
+                        @input="unitSelected($event, item)"
+                    )
+
+                td.text-center
+                    input.mr-2.text-center.new_price(type='number', v-model="item.newPrice", :disabled="!item.MstItem")
+                    //- label / unit
+                td.text-center  {{item.tax || '-'}}
+                td.text-center(v-if="item.newPrice")  {{ calculateTax(item) }}
+                td.text-center(v-else) 0
+                td.text-center
+                    v-icon.far.fa-trash-alt.mr-3(small, @click='deleteItem(index)')
+                    v-icon.far.fa.fa-plus(v-if="index === contract.contractItems.length - 1",small, @click='addItem()')

@@ -1,0 +1,160 @@
+[
+    {
+        "title": "Profile",
+        "icon": "el-icon-user-solid",
+        "route": "vendor.profile",
+        "showTo": "isVendor"
+    },
+    {
+        "title": "Contract History",
+        "icon": "el-icon-s-cooperation",
+        "route": "vendor.contract",
+        "showTo": "isVendor"
+    },
+    {
+        "title": "Ledger",
+        "icon": "fa fa-inr",
+        "route": "vendor.ledger",
+        "showTo": "isVendor"
+    },
+    {
+        "title": "Setting",
+        "icon": "el-icon-setting",
+        "route": "setting",
+        "showTo": "isVendor"
+    },
+    {
+        "title": "Essense",
+        "icon": "el-icon-location",
+        "showTo": "isSuperAdmin",
+        "childRoute": [
+            "bd.category.list",
+            "bd.question.list",
+            "bd.survey.list",
+            "bd.survey.status.list"
+        ],
+        "submenus": [
+            {
+                "title": "Manage Question Category",
+                "showTo": "isSuperAdmin",
+                "route": "bd.category.list"
+            },
+            {
+                "title": "Manage Question",
+                "showTo": "isSuperAdmin",
+                "route": "bd.question.list"
+            },
+            {
+                "title": "Manage Project",
+                "showTo": "isSuperAdmin",
+                "route": "bd.survey.list"
+            },
+            {
+                "title": "Project Status",
+                "showTo": "isSuperAdmin",
+                "route": "bd.survey.status.list"
+            }
+        ]
+    },
+    {
+        "title": "Vendor & Contract",
+        "icon": "el-icon-s-cooperation",
+        "childRoute": [
+            "vendor.list",
+            "contract.create",
+            "template.create",
+            "contract.history"
+        ],
+        "showTo": "isSuperAdmin",
+        "submenus": [
+            {
+                "title": "Manage Vendor",
+                "route": "vendor.list",
+                "disabled": false,
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "New / Renew Contract",
+                "route": "contract.create",
+                "showTo": ""
+            },
+            {
+                "title": "Contract History",
+                "route": "contract.history",
+                "showTo": "isSuperAdmin"
+            }
+        ]
+    },
+    {
+        "title": "Master Management",
+        "icon": "el-icon-menu",
+        "showTo": "isSuperAdmin",
+        "childRoute": [
+            "master.vendor_type.list",
+            "master.payment_term.list",
+            "master.template_category.list",
+            "master.template.list",
+            "master.delivery_term.list",
+            "master.advance_payment.list"
+        ],
+        "submenus": [
+            {
+                "title": "Manage Vendor Type",
+                "route": "master.vendor_type.list",
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Manage Payment Term",
+                "route": "master.payment_term.list",
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Manage Template Category",
+                "route": "master.template_category.list",
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Manage Template",
+                "route": "master.template.list",
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Manage Delivery Term",
+                "route": "master.delivery_term.list",
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Manage Advance Payment",
+                "route": "master.advance_payment.list",
+                "showTo": "isSuperAdmin"
+            }
+        ]
+    },
+    {
+        "title": "User Management",
+        "icon": "el-icon-user",
+        "showTo": "isSuperAdmin",
+        "childRoute": [
+            "user.list",
+            "role.list",
+            "logs.list"
+        ],
+        "submenus": [
+            {
+                "title": "Manage User",
+                "route": "user.list",
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Manage Role",
+                "route": "role.list",
+                "showTo": "isSuperAdmin"
+            },
+            {
+                "title": "Logs",
+                "route": "logs.list",
+                "showTo": "isSuperAdmin"
+            }
+        ]
+    }
+]

@@ -1,0 +1,124 @@
+<script>
+import { mapGetters } from "vuex";
+import menus from "@utils/menu-items.json";
+
+export default {
+    name: "SideBar",
+    props: {
+        isCollapsed: {
+            type: Boolean,
+            default: false,
+        },
+    },
+    data() {
+        return {
+            loggedInUser: this.$store.getters["account/getUser"],
+            activeTab: "contract.history",
+            menus,
+        };
+    },
+    created() {
+        this.setActiveTab();
+    },
+    methods: {
+        setActiveTab() {
+            const routeName = this.$store.state.route.name;
+
+            if (routeName === "bd.question.manage") this.activeTab = "bd.question.list";
+            else if (routeName === "bd.survey.view") this.activeTab = "bd.survey.list";
+            else if (routeName === "vendor.ledger.list") this.activeTab = "vendor.list";
+            else if (routeName === "vendor.view") this.activeTab = "vendor.list";
+            else if (routeName === "contract.view") this.activeTab = "contract.history";
+            else if (routeName === "contract.edit") this.activeTab = "contract.create";
+            else if (routeName === "vendor.contract.view-contract") this.activeTab = "vendor.contract";
+            else this.activeTab = this.$store.state.route ? routeName : "contract.history";
+        },
+        showCategory(item) {
+            if (this.isSuperAdmin && item.showTo === "isSuperAdmin") return true;
+
+            if (this.isMDM && item.route === "contract.create") return false;
+
+            if (this.isVendor && item.showTo === "isVendor") {
+                if (item.route === "vendor.ledger") return this.showVendorLedger;
+                else return true;
+            }
+
+            if (this.loggedInUser.permission && this.loggedInUser.permission.length) {
+                const exists = this.loggedInUser.permission.find(f => f.includes(item.route));
+                return !!exists;
+            }
+            return false;
+        },
+        showMenu(menu) {
+            const subRoutes = menu.submenus.map(s => s.route);
+            if (this.isVendor) {
+                if (menu.route === "vendor.ledger") return this.showVendorLedger;
+                else return true;
+            }
+
+            if (this.loggedInUser.permission && this.loggedInUser.permission.length) {
+                const exists = subRoutes.find(r => this.loggedInUser.permission.includes(r));
+                return !!exists;
+            }
+            return true;
+        },
+        logout() {
+            this.$store.dispatch("auth/logout");
+        },
+        handleSelect(key) {
+            this.activeTab = key;
+        },
+    },
+    computed: {
+        ...mapGetters("account", ["isSuperAdmin", "isVendor", "showVendorLedger", "isMDM", "isSourcingTeam", "isCoorporateSourcingTeam"]),
+    },
+};
+</script>
+
+<template lang="pug">
+.navigation
+    el-menu.bg-transparent(
+        :default-active="activeTab", 
+        :collapse="isCollapsed",
+        :unique-opened="true",
+        class="el-menu-vertical-demo",
+        :collapse-transition="false",
+        @select="handleSelect"
+    )
+        template(v-for="menu in menus")
+            el-submenu(
+                v-if="!isVendor && menu.submenus && menu.submenus.length && showMenu(menu)", 
+                :index="menu.submenus[0].route"
+            )
+                template(slot="title")
+                    i(:class="menu.icon")
+                    span(slot="title") {{menu.title}}
+                el-menu-item-group
+                    el-menu-item(
+                        v-for="submenu in menu.submenus",
+                        v-if="showCategory(submenu)"
+                        :key="submenu.title",
+                        :index="submenu.route", 
+                        @click="$utility.goToPage(submenu.route)",
+                        :disabled="submenu.disabled",
+                    ) {{submenu.title}}
+                    //- el-menu-item(
+                    //-     v-if="isCoorporateSourcingTeam || isSourcingTeam || isMDM"
+                    //-     @click="$utility.goToPage('override.contract.history')",
+                    //-  ) Override Contract History
+            el-menu-item(
+                v-else-if="showCategory(menu)", 
+                :index="menu.route",
+                @click="$utility.goToPage(menu.route)"
+            )
+                i(:class="menu.icon")
+                span(slot="title") {{menu.title}}
+</template>
+
+<style lang="scss">
+@import "@design/common.scss";
+@import "@design/component/_nav.scss";
+// .main-sidebar {
+//     background-image: url("../../../assets/images/login-back.png");
+// }
+</style>

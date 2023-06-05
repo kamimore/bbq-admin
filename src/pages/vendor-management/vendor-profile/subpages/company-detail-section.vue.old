@@ -1,0 +1,146 @@
+<script>
+import { mapGetters } from "vuex";
+import FileUpload from "@components/file-upload";
+
+export default {
+    name: "CompanyDetailSection",
+    components: {
+        FileUpload,
+    },
+    props: {
+        vendor: {
+            type: Object,
+            default: () => {},
+        },
+        mode: {
+            type: String,
+            default: "add", // add, readOnly
+        },
+    },
+    methods: {
+        saveFile(file) {
+            this.vendor.MSMECertificate = file;
+        },
+        confirmDelete() {
+            this.$confirm("Are you sure you want to delete?", "Delete Certificate", {
+                confirmButtonText: "Yes",
+                cancelButtonText: "No",
+                type: "error",
+                showCancelButton: true,
+                lockScroll: false,
+            }).then(async () => {
+                this.vendor.MSMECertificate = null;
+            });
+        },
+    },
+    computed: {
+        ...mapGetters("account", [
+            "isSuperAdmin",
+            "isVendor",
+            "isMDM",
+            "isSourcingTeam",
+            "isCoorporateSourcingTeam",
+            "isSourcingRole",
+        ]),
+        isDisabled() {
+            return this.mode === "readOnly";
+        },
+        // vendorTypeEditable() {
+        //     if (this.isSourcingRole) {
+        //         if (this.vendor.status === "draft" && this.vendor.type === "internal") return true;
+
+        //         return this.vendor.status === "pending";
+        //     }
+        //     return false;
+        // },
+    },
+    watch: {
+        "vendor.companyName"(val) {
+            if (this.mode !== "readOnly" && !val) {
+                this.$utility.showErrorMessage("Company name can not be empty");
+            }
+        },
+    },
+};
+</script>
+
+<template lang="pug">
+.col-md-12.grid-margin.stretch-card.no-padding.vendor-company-details
+    .no-borders
+        .card-body
+            .row    
+                .col-sm-12
+                    .row
+                        .col-md-4
+                            form-field(
+                                v-model="vendor.companyName",
+                                attribute="Company Name",
+                                input-type="text",
+                                :required="true",
+                                :disabled="isDisabled",
+                                :maxLength="50",
+                            )
+                        //- .col-sm-4.sourc-r
+                            form-field(
+                                v-if="!isVendor",
+                                v-model="vendor.vendorType",
+                                attribute="Sourcing Remark",
+                                input-type="textarea",
+                                :required="true",
+                                :disabled="!vendorTypeEditable",
+                                :maxLength="50",
+                            )
+                        .col-md-8.text-right.msme.pl-2
+                            .selectbox
+                                form-field-input(
+                                    v-model="vendor.isMSME",
+                                    attribute="Are you a MSME company?",
+                                    input-type="checkbox-border",
+                                    label='Are you a MSME company ?',
+                                    :disabled="isDisabled",
+                                )
+                    //.row.mt-4
+                        .col-sm-6.sourc-r
+                            form-field(
+                                v-if="!isVendor",
+                                v-model="vendor.vendorType",
+                                attribute="Sourcing Remark",
+                                input-type="textarea",
+                                :required="true",
+                                :disabled="!vendorTypeEditable",
+                                :maxLength="50",
+                            )
+                    .row
+                        .col-md-4.mt-4(v-if="vendor.isMSME && !vendor.MSMECertificate")
+                            file-upload(
+                                label="Upload your MSME certificate"
+                                @save="saveFile",
+                                accept=".jpg,.jpeg,.png,.pdf",
+                                :disabled="isDisabled"
+                            )
+                        .col-md-6.mt-4(v-if="vendor.isMSME && vendor.MSMECertificate")
+                            span  MSME Certifcate : 
+                            span.link(
+                                @click="$utility.downloadFile(vendor.MSMECertificate.fileUrl)"
+                            ) {{vendor.MSMECertificate.fileName}}
+                            span.text-center.text-danger.pointer.cursor-pointer.ml-2(
+                                v-if="mode === 'add'",
+                                @click="confirmDelete()"
+                            ) 
+                                i.fa.fa-times(aria-hidden="true")
+                        
+</template>
+
+<style lang="scss" scoped>
+.el-checkbox.is-bordered {
+    width: 100% !important;
+}
+.vendor-company-details .form-group {
+    margin-bottom: 0;
+}
+.sourc-r textarea.fix-height {
+    max-height: 100px !important;
+    height: 100% !important;
+    overflow-y: auto;
+}
+</style>
